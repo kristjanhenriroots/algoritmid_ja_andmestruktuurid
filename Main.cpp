@@ -130,7 +130,7 @@ int InsertNewObject(HeaderD** pStruct7, char* pNewID, unsigned long int NewCode)
 	obj_test = (Object3*)pS7->pObject;
 	
 	// check if pNewID exists
-	Object3* newObj, *foundObj, *nextObj;
+	Object3* newObj, *foundObj;
 	int exists = first;
 	int* pExists = &exists;
 	foundObj = findObject((Object3*)pS7->pObject, pNewID, pExists);
@@ -293,24 +293,24 @@ Node* CreateBinaryTree(HeaderD* pStruct7) {
 
 			if (newCode > ((Object3*)p->pObject)->Code) {		// current node key is bigger, new one goes to the left
 				printf("Moving right\n");
-				if (!p->pLeft) {
-					p->pLeft = pNew;
+				if (!p->pRight) {
+					p->pRight = pNew;
 					printf("Added right of %d\n", ((Object3*)p->pObject)->Code);
 					found++;
 				}
 				else
-					p = p->pLeft;
+					p = p->pRight;
 
 			}
 			else if (newCode < ((Object3*)p->pObject)->Code) {	// current is smaller, new one goes to right
 				printf("Moving left\n");
-				if (!p->pRight) {
-					p->pRight = pNew;
+				if (!p->pLeft) {
+					p->pLeft = pNew;
 					printf("Added left of %d\n", ((Object3*)p->pObject)->Code);
 					found++;
 				}
 				else
-					p = p->pRight;
+					p = p->pLeft;
 			}
 			else
 				return 0; 
@@ -357,6 +357,7 @@ Stack* Pop(Stack* pStack, void** pResult) {
 }
 
 void TreeTraversal(Node* pTree) {
+	int cnt = 1;
 	Stack* pStack = 0;
 	Node* p1 = pTree, * p2;
 	if (!pTree)
@@ -369,17 +370,120 @@ void TreeTraversal(Node* pTree) {
 			p1 = p1->pLeft;
 		}
 		pStack = Pop(pStack, (void**)&p2);
-		printf("%-15s %-10lu %02d:%02d:%02d\n", ((Object3*)p2->pObject)->pID, ((Object3*)p2->pObject)->Code, ((Object3*)p2->pObject)->sTime1.Hour, ((Object3*)p2->pObject)->sTime1.Minute, ((Object3*)p2->pObject)->sTime1.Second);
-		
+		printf("%2d. %-15s %-10lu %02d:%02d:%02d\n", cnt, ((Object3*)p2->pObject)->pID, ((Object3*)p2->pObject)->Code, ((Object3*)p2->pObject)->sTime1.Hour, ((Object3*)p2->pObject)->sTime1.Minute, ((Object3*)p2->pObject)->sTime1.Second);
+		cnt++;
 		p1 = p2->pRight;
 	} while (!(!pStack && !p1));
 	return;
 }
 
+Node* DeleteTreeNode(Node* pTree, unsigned long int Code) {
+	// find if the given code exists in the tree
+
+	if (!pTree)
+		return 0;
+	Node* p = pTree;
+	Stack* pStack = 0;
+
+	while (p && ((Object3*)p->pObject)->Code != Code) {
+		pStack = Push(pStack, p);
+		if (Code > ((Object3*)p->pObject)->Code) {
+			printf("%d is larger than %d\n", Code, ((Object3*)p->pObject)->Code);
+			p = p->pRight;	// given code is larger than current, go right
+		}
+			
+		else if (Code < ((Object3*)p->pObject)->Code) {
+			printf("%d is smaller than %d\n", Code, ((Object3*)p->pObject)->Code);
+			p = p->pLeft;
+		}
+			
+		if (p == NULL)
+			printf("p reached NULL\n");
+		//printf("Current code %d\n", ((Object3*)p->pObject)->Code);
+	}
+	// when the loop ends the correct is either found or it doesn't exist
+	if (!p || ((Object3*)p->pObject)->Code != Code) {
+		printf("Code does not exist\n");
+		while (pStack)
+			pStack = Pop(pStack, (void**)p);
+		return 0;
+	}
+
+	// code is found
+
+	if (((Object3*)pTree->pObject)->Code == Code) {	// the removed object is the root
+		printf("root detected\n");
+		if (p->pRight) {					// bigger nodes exist, the smallest of the group will inherit the left branch
+			p = p->pRight;
+			while (p->pLeft)				// getting the smallest element of right branch
+				p = p->pLeft;
+
+			p->pLeft = pTree->pLeft;		// moving the branch
+			pTree = pTree->pRight;
+		}
+		else
+			pTree = pTree->pLeft;				// no right branch from root
+		//free(pTree);
+		//pTree = pTree->pRight;							// assign new root
+	}
+	else if (!p->pLeft && !p->pRight) {		// no leaves
+		printf("No leaves detected\n");
+		if (((Node*)pStack->pObject)->pLeft == p)
+			((Node*)pStack->pObject)->pLeft = NULL;
+		else
+			((Node*)pStack->pObject)->pRight = NULL;
+
+		
+	}
+	else if (!p->pLeft) {					// leaf on right
+		printf("leaf on right\n");
+		if (((Object3*)p->pObject)->Code < ((Object3*)pStack->pObject)->Code) { // node being removed is left
+			((Node*)pStack->pObject)->pLeft = p->pRight;
+		}
+		else {
+			((Node*)pStack->pObject)->pRight = p->pRight;
+		}
+	}
+	else if (!p->pRight) {									// leaf is left
+		printf("leaf on left\n");
+		if (((Object3*)p->pObject)->Code < ((Object3*)pStack->pObject)->Code) {
+			((Node*)pStack->pObject)->pLeft = p->pLeft;
+		}
+		else {
+			((Node*)pStack->pObject)->pRight = p->pLeft;
+		}
+	}
+	else {									// both leaves present
+		Node* t;
+		printf("both leaves present\n");
+		//printf("Left is %d, right is %d\n", ((Object3*)pStack->pObject)->)
+		if (((Object3*)p->pObject)->Code < ((Object3*)pStack->pObject)->Code)
+			((Node*)pStack->pObject)->pLeft = p->pRight;
+		else
+			((Node*)pStack->pObject)->pRight = p->pRight;
+		t = p->pLeft;
+		printf("%d was stacked\n", ((Object3*)p->pLeft->pObject)->Code);
+		p = p->pRight;
+		while (p->pLeft)				// getting the smallest element of right branch
+			p = p->pLeft;
+		printf("currently at element %d\n", ((Object3*)p->pObject)->Code);
+		p->pLeft = t;
+		p = p->pLeft;
+		printf("%d was retrieved\n", ((Object3*)t->pObject)->Code);
+		printf("data is %d\n", ((Object3*)p->pObject)->Code);
+	}
+	
+	printf("reached end\n");
+	while (pStack)
+		pStack = Pop(pStack, (void**)&p);
+	//free(p);
+	return pTree;
+}
+
 
 int main()
 {
-	srand(time(NULL));   // Initialization, use to generate Code
+	srand((unsigned int)time(NULL));   // Initialization, use to generate Code
 	// Kirjutage lähtestruktuuri genereeriv lause. See on:
 	// g) Struct7 puhul:
 	HeaderD *pStruct = GetStruct7(3, 35);
@@ -422,6 +526,14 @@ int main()
 			case '5':
 				if(pTree)
 					TreeTraversal(pTree);
+				break;
+			case '6':
+				if (pTree) {
+					unsigned long int code;
+					scanf("%d", &code);
+					pTree = DeleteTreeNode(pTree, code);
+				}
+					
 				break;
 			case 'x':
 				inloop = 0;
