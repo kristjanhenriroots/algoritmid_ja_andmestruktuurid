@@ -248,6 +248,134 @@ unsigned long int randomNumber() {
 	return rand() * 30;	// RAND_MAX is 32767, so the result is multiplied by 30 to get a 9 digit number as a limit
 }
 
+Node* CreateBinaryTree(HeaderD* pStruct7) {
+	unsigned long int newCode;
+	HeaderD* pS7 = pStruct7;
+	Object3* obj = (Object3*)pS7->pObject;
+	Node* pTree = (Node*)malloc(sizeof(Node)), *p;
+
+	int counter = 1;
+	
+	if (pTree == NULL)
+		return 0;
+
+	pTree->pObject = (void*)pS7->pObject;
+	pTree->pLeft = pTree->pRight = NULL;
+	obj = (Object3*)pTree->pObject;
+	pS7 = pS7->pNext;
+	int found = 0;
+	
+	printf("Root is %d\n", obj->Code);
+	
+	
+	while (pS7) {
+		Node* pNew = (Node*)malloc(sizeof(Node));
+		if (pNew == NULL)
+			return 0;
+		p = pTree;
+		printf("headers are %s and %s\n", ((Object3*)pS7->pObject)->pID, obj->pID);
+		if (pS7->cBegin == obj->pID[0] && strcmp(((Object3*)pS7->pObject)->pID, obj->pID) != 0) {
+			printf("same header for %s and %s\n", ((Object3*)pS7->pObject)->pID, obj->pID);
+			pNew->pObject = (void*)obj; 
+		}
+			
+		else
+			pNew->pObject = (void*)pS7->pObject;
+		
+		obj = (Object3*)pNew->pObject;
+		pNew->pLeft = pNew->pRight = NULL;
+		newCode = obj->Code;
+
+		printf("Adding code %d\n", newCode);
+		while (!found) {
+
+			//obj = (Object3*)p->pObject;
+
+			if (newCode > ((Object3*)p->pObject)->Code) {		// current node key is bigger, new one goes to the left
+				printf("Moving right\n");
+				if (!p->pLeft) {
+					p->pLeft = pNew;
+					printf("Added right of %d\n", ((Object3*)p->pObject)->Code);
+					found++;
+				}
+				else
+					p = p->pLeft;
+
+			}
+			else if (newCode < ((Object3*)p->pObject)->Code) {	// current is smaller, new one goes to right
+				printf("Moving left\n");
+				if (!p->pRight) {
+					p->pRight = pNew;
+					printf("Added left of %d\n", ((Object3*)p->pObject)->Code);
+					found++;
+				}
+				else
+					p = p->pRight;
+			}
+			else
+				return 0; 
+			printf("new loop\n");
+
+		}
+		counter++;
+		found = 0;
+
+		if (obj->pNext)
+			obj = obj->pNext;
+		else
+			pS7 = pS7->pNext;
+
+
+	}
+	printf("added %d entries\n", counter);
+	return pTree;
+}
+
+Stack* Push(Stack* pStack, void* p) {
+	if (!p)
+		return pStack;
+	Stack* pNew;
+	pNew = (Stack*)malloc(sizeof(Stack));
+	if (pNew == NULL)
+		return pStack;
+	pNew->pObject = p;
+	pNew->pNext = pStack;
+	return pNew;
+}
+
+Stack* Pop(Stack* pStack, void** pResult) {
+	Stack* p;
+	if (!pStack)
+	{
+		*pResult = 0;
+		return pStack;
+	}
+	*pResult = pStack->pObject;
+	p = pStack->pNext;
+	free(pStack);
+	return p;
+}
+
+void TreeTraversal(Node* pTree) {
+	Stack* pStack = 0;
+	Node* p1 = pTree, * p2;
+	if (!pTree)
+		return;
+	do
+	{
+		while (p1)
+		{
+			pStack = Push(pStack, p1);
+			p1 = p1->pLeft;
+		}
+		pStack = Pop(pStack, (void**)&p2);
+		printf("%-15s %-10lu %02d:%02d:%02d\n", ((Object3*)p2->pObject)->pID, ((Object3*)p2->pObject)->Code, ((Object3*)p2->pObject)->sTime1.Hour, ((Object3*)p2->pObject)->sTime1.Minute, ((Object3*)p2->pObject)->sTime1.Second);
+		
+		p1 = p2->pRight;
+	} while (!(!pStack && !p1));
+	return;
+}
+
 
 int main()
 {
@@ -255,6 +383,7 @@ int main()
 	// Kirjutage lähtestruktuuri genereeriv lause. See on:
 	// g) Struct7 puhul:
 	HeaderD *pStruct = GetStruct7(3, 35);
+	Node* pTree = NULL;
 	if (!pStruct)							// exit if faulty data was given
 		return 0;
 	int inloop = 1;
@@ -263,6 +392,9 @@ int main()
 	printf(	"1. Print data\n"
 			"2. Insert new object\n"
 			"3. Delete object\n"
+			"4.	Create binary tree\n"
+			"5. Print binary tree\n"
+			"6. Delete tree node\n"
 			"x  Exit program\n"
 			);
 
@@ -283,6 +415,13 @@ int main()
 				for (int i = 0; i < 14; i++)
 					if(!RemoveExistingObject(&pStruct, test[i]))
 						printf("""%s"" not removed!\n", test[i]);
+				break;
+			case '4':
+				pTree = CreateBinaryTree(pStruct);
+				break;
+			case '5':
+				if(pTree)
+					TreeTraversal(pTree);
 				break;
 			case 'x':
 				inloop = 0;
